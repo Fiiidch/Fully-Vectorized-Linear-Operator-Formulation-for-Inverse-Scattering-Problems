@@ -21,7 +21,7 @@ debug_mode = false #if true spams print statements for every step
 n_t = min(n_t, original_n_t)
 data_range = 1:n_t
 
-data_dir = "Simulated_data_downsampled/"
+data_dir = "Simulated_data/"
 
 if isdir("Plots/$object_name")
     rm("Plots/$object_name", recursive=true)
