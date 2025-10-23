@@ -3,63 +3,41 @@ include("Modules/custom_plotters.jl")
 using HDF5
 using FFTW
 
-object_name = "150khz_5ms_Period"
-original_n_t = 10001 # Number of time steps of data before any changes. Do not change using different data sets.
-data_freq = 1_000_000   # Frequency of the data in Hz
+object_name = "Showcase"
+original_n_t = 2000 # Number of time steps of data before any changes.
+data_freq = 200_000   # Frequency of the data in Hz
 num_noise = 1 #number of measurements per data set. used for noise compensation.
-noise_amplitude = 0 # Amplitude of noise added to the data, as a percentage of the RMS signal level.
+noise_amplitude = 0. # Amplitude of noise added to the data, as a percentage of the RMS signal level.
 
-n_t = 10000 # Number of target steps of data. Here, 10001 is the natural amount, going lower will shorten the data.
-min_freq = 0000.0  #min frequency of bandpass filter
-max_freq = 150000.0 #max frequency of bandpass filter
+n_t = 2000 # Number of target steps of data.
+min_freq = 0.0  #min frequency of bandpass filter
+max_freq = 100_000.0 #max frequency of bandpass filter (data_freq/2 does not filter at all)
 
 range = 1:100   #range of data for time axis plotting. Amount in indexes, not time steps.
 
 debug_mode = false #if true spams print statements for every step
 
-n_init = floor(Int, (original_n_t - 1) ÷ n_t) * n_t 
-indexing_range = 1:n_init #a range to shorten the data so that it is a multiple of n_t
-end_range = 1:n_t   
+# Ensure n_t doesn't exceed original_n_t
+n_t = min(n_t, original_n_t)
+data_range = 1:n_t
 
-# Debug: Try to open the specified HDF5 file and print its keys
-try
-    h5file = h5open("Simulated_Alu_9mm/fz_defect_B_soft/fz_defect_B_SrcEvent01.h5", "r")
-    println("Keys in defect_B_soft file: ", keys(h5file))
-    close(h5file)
-catch e
-    println("Error opening defect_B_soft file: ", e)
+data_dir = "Simulated_data_downsampled/"
+
+if isdir("Plots/$object_name")
+    rm("Plots/$object_name", recursive=true)
 end
 
-try
-    h5file = h5open("Simulated_Alu_9mm/fz_defect_B/fz_defect_B_SrcEvent01.h5", "r")
-    println("Keys in defect_B_soft file: ", keys(h5file))
-    close(h5file)
-catch e
-    println("Error opening defect_B_soft file: ", e)
-end
-
-
-raw_data_dir = "Simulated_Alu_9mm/fz_homo_q/SurfaceVelocity/"
-defect_A_dir = "Simulated_Alu_9mm/fz_defect_A/ReceiverData/"
-defect_B_dir = "Simulated_Alu_9mm/fz_defect_B/ReceiverData/"
-defect_C_dir = "Simulated_Alu_9mm/fz_defect_C/ReceiverData/"
-defect_AC_dir = "Simulated_Alu_9mm/fz_defect_AC/"
-defect_AB_dir = "Simulated_Alu_9mm/fz_defect_AB/"
-defect_A5_dir = "Simulated_Alu_9mm/fz_defect_A5/"
-defect_A5B_dir = "Simulated_Alu_9mm/fz_defect_A5B/"
-defect_ETH_dir = "Simulated_Alu_9mm/fz_defect_ETH/"
-defect_D_dir = "Simulated_Alu_9mm/fz_defect_D/"
-defect_E_dir = "Simulated_Alu_9mm/fz_defect_E/"
-defect_A5_delam_dir = "Simulated_Alu_9mm/fz_defect_A5_delam/fz_defect_A5_delam/"
-defect_A_delam_dir = "Simulated_Alu_9mm/fz_defect_A_delam/"
-defect_AC_square_dir = "Simulated_Alu_9mm/fz_defect_AC_square/"
-defect_A_0_6_dir = "Simulated_Alu_9mm/fz_defect_A_0.6/ReceiverData/"
-defect_B_0_6_dir = "Simulated_Alu_9mm/fz_defect_B_soft/ReceiverData/"
-defect_C_0_6_dir = "Simulated_Alu_9mm/fz_defect_C_0.6/ReceiverData/"
-defect_AB_0_6_dir = "Simulated_Alu_9mm/fz_defect_AB_0.6/ReceiverData/"
-defect_AC_0_6_dir = "Simulated_Alu_9mm/fz_defect_AC_0.6/ReceiverData/"
-defect_A5_0_6_dir = "Simulated_Alu_9mm/fz_defect_A5_0.6/ReceiverData/"
-defect_D_0_6_dir = "Simulated_Alu_9mm/fz_defect_D_0.6/ReceiverData/"
+raw_data_dir = "$(data_dir)fz_homo_q/SurfaceVelocity/"
+defect_A_dir = "$(data_dir)fz_defect_A/"
+defect_B_dir = "$(data_dir)fz_defect_B/"
+defect_C_dir = "$(data_dir)fz_defect_C/"
+defect_AC_dir = "$(data_dir)fz_defect_AC/"
+defect_AB_dir = "$(data_dir)fz_defect_AB/"
+defect_A5_dir = "$(data_dir)fz_defect_A5/"
+defect_A5B_dir = "$(data_dir)fz_defect_A5B/"
+defect_D_dir = "$(data_dir)fz_defect_D/"
+defect_E_dir = "$(data_dir)fz_defect_E/"
+defect_AC_square_dir = "$(data_dir)fz_defect_AC_square/"
 
 defect_A_filename_prefix = "fz_defect_A_SrcEvent"
 defect_B_filename_prefix = "fz_defect_B_SrcEvent"
@@ -68,23 +46,12 @@ defect_AC_filename_prefix = "fz_defect_AC_SrcEvent"
 defect_AB_filename_prefix = "fz_defect_AB_SrcEvent"
 defect_A5_filename_prefix = "fz_defect_A5_SrcEvent"
 defect_A5B_filename_prefix = "fz_defect_A5B_SrcEvent"
-defect_ETH_filename_prefix = "fz_defect_ETH_SrcEvent"
 defect_D_filename_prefix = "fz_defect_D_SrcEvent"
 defect_E_filename_prefix = "fz_defect_E_SrcEvent"
-defect_A5_delam_filename_prefix = "SIM_NAME_DELAM_A5_SrcEvent"
-defect_A_delam_prefix = "fz_defect_delam_A_SrcEvent"
 defect_AC_square_prefix = "fz_defect_AC_square_SrcEvent"
-defect_A_0_6_filename_prefix = "fz_defect_A_SrcEvent"
-defect_B_0_6_filename_prefix = "fz_defect_B_SrcEvent"
-defect_C_0_6_filename_prefix = "fz_defect_C_SrcEvent"
-defect_AB_0_6_filename_prefix = "fz_defect_AB_SrcEvent"
-defect_AC_0_6_filename_prefix = "fz_defect_AC_SrcEvent"
-defect_A5_0_6_filename_prefix = "fz_defect_A5_SrcEvent"
-defect_D_0_6_filename_prefix = "fz_defect_D_SrcEvent"
 
 # List of defect directories and their corresponding filename prefixes
 defect_dirs = [
-    defect_B_0_6_dir,
     defect_A_dir,
     defect_B_dir,
     defect_C_dir,
@@ -92,23 +59,12 @@ defect_dirs = [
     defect_AB_dir,
     defect_A5_dir,
     defect_A5B_dir,
-    defect_ETH_dir,
     defect_D_dir,
     defect_E_dir,
-    defect_A5_delam_dir,
-    defect_A_delam_dir,
-    defect_AC_square_dir,
-    defect_A_0_6_dir,
-    
-    defect_C_0_6_dir,
-    defect_AB_0_6_dir,
-    defect_AC_0_6_dir,
-    defect_A5_0_6_dir,
-    defect_D_0_6_dir
+    defect_AC_square_dir
 ]
 
 defect_prefixes = [
-    defect_B_0_6_filename_prefix,
     defect_A_filename_prefix,
     defect_B_filename_prefix,
     defect_C_filename_prefix,
@@ -116,24 +72,13 @@ defect_prefixes = [
     defect_AB_filename_prefix,
     defect_A5_filename_prefix,
     defect_A5B_filename_prefix,
-    defect_ETH_filename_prefix,
     defect_D_filename_prefix,
     defect_E_filename_prefix,
-    defect_A5_delam_filename_prefix,
-    defect_A_delam_prefix,
-    defect_AC_square_prefix,
-    defect_A_0_6_filename_prefix,
-    defect_C_0_6_filename_prefix,
-    defect_AB_0_6_filename_prefix,
-    defect_AC_0_6_filename_prefix,
-    defect_A5_0_6_filename_prefix,
-    defect_D_0_6_filename_prefix
+    defect_AC_square_prefix
 ]
 # List of defect names
-defect_names = [
-    "defect_B_0.6", "defect_A", "defect_B", "defect_C", "defect_AC", "defect_AB", "defect_A5", "defect_A5B", "defect_ETH",
-    "defect_D", "defect_E", "defect_A5_delam", "defect_A_delam", "defect_AC_square", "defect_A_0.6",
-     "defect_C_0.6", "defect_AB_0.6", "defect_AC_0.6", "defect_A5_0.6", "defect_D_0.6"
+defect_names = ["defect_A", "defect_B", "defect_C", "defect_AC", "defect_AB", "defect_A5", "defect_A5B",
+    "defect_D", "defect_E", "defect_AC_square"
 ]
 # Following section remaps the x-y system of the data to a n- system.
 # It is specific to the data set and should be adapted for other data sets.
@@ -228,26 +173,22 @@ for (s, sen) in enumerate(sensor_indices)
     for n in 1:num_noise
         local h5file = h5open(raw_data_dir * "fz_homo_q_fz_src0$s.h5", "r")
         local key = "Vz"
-        local measurements = read(h5file, key)[:,:,indexing_range]
-        for shift_amt in n_t:n_t:(n_init)
-            measurements = measurements .+ circshift(measurements, (0, 0, shift_amt))
-        end
-        measurements = measurements[:,:,end_range]
+        local measurements = read(h5file, key)[:,:,data_range]
         measurements = reshape(measurements, x_max * y_max, n_t)
         if s == 1
-            global rescaler = 1
-            global rms = sqrt(mean(measurements[sensor_indices[2], 1:div(original_n_t, 10)].^2))
+            global rescaler = maximum(measurements)
+            global rms = sqrt(mean(measurements[sensor_indices[2], 1:div(n_t, 10)].^2))
         end
         
-        # Add noise with amplitude that is noise_amplitude (10%) of the RMS signal level
+        # Add noise with amplitude that is noise_amplitude of the RMS signal level
         measurements ./= rescaler    
-        measurements .+= rms / rescaler * noise_amplitude * randn(size(measurements)) # Add 10% random noise
+        measurements .+= rms / rescaler * noise_amplitude * randn(size(measurements)) # Add random noise
         add_raw_data(object_name, measurements, sen) 
     end
 end
 
 
-#measurements are downsampled to the frequency of raw data. also shortens the vector by ariticially making them periodic to the length n_t
+# Process measurements from already preprocessed data
 function add_files_and_downsample(file_dir, file_prefix, defect_name)
     for src in 1:5
         local key = "data"
@@ -255,19 +196,10 @@ function add_files_and_downsample(file_dir, file_prefix, defect_name)
         defect_data = read(h5file, key)
         for msr in 1:5
             for n in 1:num_noise
-                defect = defect_data[:, msr]
-                defect_downsampled = irfft(rfft(defect)[1:(div(original_n_t,2) + 1)], original_n_t)
-                defect_downsampled = defect_downsampled[indexing_range]
-                for shift_amt in n_t:n_t:(n_init)
-                    defect_downsampled = defect_downsampled .+ circshift(defect_downsampled, (shift_amt))
-                end
-                defect_downsampled = defect_downsampled[end_range]
-                # Calculate downsampling factor based on lengths ratio
-                downsample_factor = length(defect) / original_n_t 
-                defect_downsampled ./= rescaler * downsample_factor
-                # Add noise like we do for raw data
-                defect_downsampled .+= rms / rescaler * noise_amplitude * randn(size(defect_downsampled)) 
-                add_measurements(object_name, defect_name, sensor_indices[src], sensor_indices[msr], defect_downsampled)
+                defect = defect_data[data_range, msr]
+                defect ./= rescaler 
+                defect .+= rms / rescaler * noise_amplitude * randn(size(defect)) 
+                add_measurements(object_name, defect_name, sensor_indices[src], sensor_indices[msr], defect)
             end
         end  
     end
@@ -299,10 +231,11 @@ def_mat[1] = 1
 calculate_greens_function(object_name, lambda = 0.00000001)
 heatmap_3d_plot_raw_data_sensors(object_name, 2, range)
 
-
-
 plot_greens_kernel(object_name, 2, 5106)
-analyze_source_terms(object_name, "defect_A", 1:1000)
+
+#analyze_source_terms(object_name, "defect_A", range)
+#analyze_source_terms(object_name, "defect_A5", range)
+
 create_reduced_system_matrix(object_name, "reduced_mat",def_mat, lambdas = [100])
 
 color = :ice
@@ -314,23 +247,9 @@ end
 
 plot_defect_sideways(object_name, "reduced_mat","defect_A5", "x", 0.5)
 plot_defect_sideways(object_name, "reduced_mat","defect_A", "x", 0.5)
-plot_defect_sideways(object_name, "reduced_mat","defect_C", "x", 0.5)
-plot_defect_sideways(object_name, "reduced_mat","defect_B", "x", 0.5)
-plot_defect_sideways(object_name, "reduced_mat","defect_A_delam", "x", 0.5)
-plot_defect_sideways(object_name, "reduced_mat","defect_A5_delam", "x", 0.5)
-plot_defect_sideways(object_name, "reduced_mat","defect_D", "x", 0.5)
-plot_defect_sideways(object_name, "reduced_mat","defect_E", "x", 0.5)
-plot_defect_sideways(object_name, "reduced_mat","defect_AC_square", "x", 0.5)
 
 plot_defect_sideways(object_name, "reduced_mat","defect_A5", "y", 0.5)
 plot_defect_sideways(object_name, "reduced_mat","defect_A", "y", 0.5)
-plot_defect_sideways(object_name, "reduced_mat","defect_C", "y", 0.5)
-plot_defect_sideways(object_name, "reduced_mat","defect_B", "y", 0.5)
-plot_defect_sideways(object_name, "reduced_mat","defect_A_delam", "y", 0.5)
-plot_defect_sideways(object_name, "reduced_mat","defect_A5_delam", "y", 0.5)
-plot_defect_sideways(object_name, "reduced_mat","defect_D", "y", 0.5)
-plot_defect_sideways(object_name, "reduced_mat","defect_E", "y", 0.5)
-plot_defect_sideways(object_name, "reduced_mat","defect_AC_square", "y", 0.5)
 
 
 
